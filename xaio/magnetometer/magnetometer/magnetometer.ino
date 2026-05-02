@@ -2,7 +2,7 @@
 #include <QMC5883LCompass.h>
 
 // ─── MODE FLAG ────────────────────────────────────────
-#define MODE 'T'   // 'T' = test serial only, 'W' = wifi OSC
+#define MODE 'W'   // 'T' = test serial only, 'W' = wifi OSC
 
 // ─── WIFI / OSC CONFIG ────────────────────────────────
 const char* ssid      = "MI-Blocks";
