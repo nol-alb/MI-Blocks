@@ -10,16 +10,19 @@ const char* host      = "10.42.0.1";
 const int   send_port = 5005;
 
 // ─── HARDWARE CONFIG ──────────────────────────────────
-#define TRIG D2
-#define ECHO D3
+#define REC_BTN D1
+
+bool recording        = false;
+bool lastBtnState     = HIGH;
+unsigned long lastBtnTime = 0;
+const int BTN_DEBOUNCE  = 50;
 
 // ─── SETUP ────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     delay(2000);
 
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
+    pinMode(REC_BTN, INPUT_PULLUP);
 
     #if MODE == 'W'
         WiFi.disconnect(true, true);
@@ -32,7 +35,7 @@ void setup() {
         }
         Serial.println("\nConnected: " + WiFi.localIP().toString());
     #else
-        Serial.println("TEST MODE — ultrasonic only");
+        Serial.println("TEST MODE — record button only");
     #endif
 }
 
@@ -42,21 +45,21 @@ void loop() {
         OscWiFi.update();
     #endif
 
-    // read ultrasonic
-    digitalWrite(TRIG, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    unsigned long now    = millis();
+    bool currentBtnState = digitalRead(REC_BTN);
 
-    long duration = pulseIn(ECHO, HIGH);
-    float distance = duration * 0.034 / 2;
+    // toggle recording on button press
+    if (currentBtnState == LOW && lastBtnState == HIGH && (now - lastBtnTime) > BTN_DEBOUNCE) {
+        recording = !recording;
+        Serial.println(recording ? "RECORDING" : "STOPPED");
 
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+        #if MODE == 'W'
+            OscWiFi.send(host, send_port, "/xiao/c3_01/record", recording ? 1.0f : 0.0f);
+        #endif
 
-    #if MODE == 'W'
-        OscWiFi.send(host, send_port, "/xiao/c6_01/ultrasonic", distance);
-    #endif
+        lastBtnTime = now;
+    }
 
-    delay(100);
+    lastBtnState = currentBtnState;
+    delay(10);
 }

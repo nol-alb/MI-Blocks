@@ -10,16 +10,15 @@ const char* host      = "10.42.0.1";
 const int   send_port = 5005;
 
 // ─── HARDWARE CONFIG ──────────────────────────────────
-#define TRIG D2
-#define ECHO D3
+#define STRETCH A2
+
+const float RAW_MIN = 0.70;
+const float RAW_MAX = 0.80;
 
 // ─── SETUP ────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     delay(2000);
-
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
 
     #if MODE == 'W'
         WiFi.disconnect(true, true);
@@ -32,7 +31,7 @@ void setup() {
         }
         Serial.println("\nConnected: " + WiFi.localIP().toString());
     #else
-        Serial.println("TEST MODE — ultrasonic only");
+        Serial.println("TEST MODE — stretch sensor only");
     #endif
 }
 
@@ -42,21 +41,15 @@ void loop() {
         OscWiFi.update();
     #endif
 
-    // read ultrasonic
-    digitalWrite(TRIG, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    float raw    = analogRead(STRETCH) / 4095.0;
+    float mapped = constrain((raw - RAW_MIN) / (RAW_MAX - RAW_MIN), 0.0, 1.0);
 
-    long duration = pulseIn(ECHO, HIGH);
-    float distance = duration * 0.034 / 2;
-
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+    Serial.print("Raw: "); Serial.print(raw);
+    Serial.print("  Mapped: "); Serial.println(mapped);
 
     #if MODE == 'W'
-        OscWiFi.send(host, send_port, "/xiao/c6_01/ultrasonic", distance);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/stretch", mapped);
     #endif
 
-    delay(100);
+    delay(50);
 }

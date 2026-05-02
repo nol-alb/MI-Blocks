@@ -10,16 +10,12 @@ const char* host      = "10.42.0.1";
 const int   send_port = 5005;
 
 // ─── HARDWARE CONFIG ──────────────────────────────────
-#define TRIG D2
-#define ECHO D3
+#define LIGHT A0
 
 // ─── SETUP ────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     delay(2000);
-
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
 
     #if MODE == 'W'
         WiFi.disconnect(true, true);
@@ -32,7 +28,7 @@ void setup() {
         }
         Serial.println("\nConnected: " + WiFi.localIP().toString());
     #else
-        Serial.println("TEST MODE — ultrasonic only");
+        Serial.println("TEST MODE — photoresistor only");
     #endif
 }
 
@@ -42,21 +38,12 @@ void loop() {
         OscWiFi.update();
     #endif
 
-    // read ultrasonic
-    digitalWrite(TRIG, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
-
-    long duration = pulseIn(ECHO, HIGH);
-    float distance = duration * 0.034 / 2;
-
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+    float lightVal = analogRead(LIGHT) / 4095.0;
+    Serial.print("Light: "); Serial.println(lightVal);
 
     #if MODE == 'W'
-        OscWiFi.send(host, send_port, "/xiao/c6_01/ultrasonic", distance);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/light", lightVal);
     #endif
 
-    delay(100);
+    delay(20);
 }

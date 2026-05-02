@@ -10,16 +10,23 @@ const char* host      = "10.42.0.1";
 const int   send_port = 5005;
 
 // ─── HARDWARE CONFIG ──────────────────────────────────
-#define TRIG D2
-#define ECHO D3
+#define SLIDER    A0
+#define BTN_PLAY  D2
+#define BTN_PAUSE D4
+
+bool lastPlayState  = HIGH;
+bool lastPauseState = HIGH;
+unsigned long lastPlayTime  = 0;
+unsigned long lastPauseTime = 0;
+const int BTN_DEBOUNCE = 50;
 
 // ─── SETUP ────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     delay(2000);
 
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
+    pinMode(BTN_PLAY,  INPUT_PULLUP);
+    pinMode(BTN_PAUSE, INPUT_PULLUP);
 
     #if MODE == 'W'
         WiFi.disconnect(true, true);
@@ -32,7 +39,7 @@ void setup() {
         }
         Serial.println("\nConnected: " + WiFi.localIP().toString());
     #else
-        Serial.println("TEST MODE — ultrasonic only");
+        Serial.println("TEST MODE — slider + play/pause");
     #endif
 }
 
@@ -42,21 +49,36 @@ void loop() {
         OscWiFi.update();
     #endif
 
-    // read ultrasonic
-    digitalWrite(TRIG, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    unsigned long now = millis();
 
-    long duration = pulseIn(ECHO, HIGH);
-    float distance = duration * 0.034 / 2;
-
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
-
+    // slider
+    float sliderVal = analogRead(SLIDER) / 4095.0;
+    Serial.print("Slider: "); Serial.println(sliderVal);
     #if MODE == 'W'
-        OscWiFi.send(host, send_port, "/xiao/c6_01/ultrasonic", distance);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/slider", sliderVal);
     #endif
 
-    delay(100);
+    // play button
+    bool currentPlay = digitalRead(BTN_PLAY);
+    if (currentPlay == LOW && lastPlayState == HIGH && (now - lastPlayTime) > BTN_DEBOUNCE) {
+        Serial.println("PLAY");
+        #if MODE == 'W'
+            OscWiFi.send(host, send_port, "/xiao/c3_01/play", 1.0f);
+        #endif
+        lastPlayTime = now;
+    }
+    lastPlayState = currentPlay;
+
+    // pause button
+    bool currentPause = digitalRead(BTN_PAUSE);
+    if (currentPause == LOW && lastPauseState == HIGH && (now - lastPauseTime) > BTN_DEBOUNCE) {
+        Serial.println("PAUSE");
+        #if MODE == 'W'
+            OscWiFi.send(host, send_port, "/xiao/c3_01/pause", 1.0f);
+        #endif
+        lastPauseTime = now;
+    }
+    lastPauseState = currentPause;
+
+    delay(20);
 }

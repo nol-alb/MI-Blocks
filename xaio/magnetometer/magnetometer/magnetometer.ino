@@ -1,7 +1,8 @@
 #include <ArduinoOSCWiFi.h>
+#include <QMC5883LCompass.h>
 
 // ─── MODE FLAG ────────────────────────────────────────
-#define MODE 'W'   // 'T' = test serial only, 'W' = wifi OSC
+#define MODE 'T'   // 'T' = test serial only, 'W' = wifi OSC
 
 // ─── WIFI / OSC CONFIG ────────────────────────────────
 const char* ssid      = "MI-Blocks";
@@ -10,16 +11,14 @@ const char* host      = "10.42.0.1";
 const int   send_port = 5005;
 
 // ─── HARDWARE CONFIG ──────────────────────────────────
-#define TRIG D2
-#define ECHO D3
+QMC5883LCompass compass;
 
 // ─── SETUP ────────────────────────────────────────────
 void setup() {
     Serial.begin(115200);
     delay(2000);
 
-    pinMode(TRIG, OUTPUT);
-    pinMode(ECHO, INPUT);
+    compass.init();
 
     #if MODE == 'W'
         WiFi.disconnect(true, true);
@@ -32,7 +31,7 @@ void setup() {
         }
         Serial.println("\nConnected: " + WiFi.localIP().toString());
     #else
-        Serial.println("TEST MODE — ultrasonic only");
+        Serial.println("TEST MODE — magnetometer only");
     #endif
 }
 
@@ -42,20 +41,19 @@ void loop() {
         OscWiFi.update();
     #endif
 
-    // read ultrasonic
-    digitalWrite(TRIG, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG, LOW);
+    compass.read();
+    int x = compass.getX();
+    int y = compass.getY();
+    int z = compass.getZ();
 
-    long duration = pulseIn(ECHO, HIGH);
-    float distance = duration * 0.034 / 2;
-
-    Serial.print("Distance: "); Serial.print(distance); Serial.println(" cm");
+    Serial.print(x); Serial.print(" ");
+    Serial.print(y); Serial.print(" ");
+    Serial.println(z);
 
     #if MODE == 'W'
-        OscWiFi.send(host, send_port, "/xiao/c6_01/ultrasonic", distance);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/compass_x", (float)x);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/compass_y", (float)y);
+        OscWiFi.send(host, send_port, "/xiao/c3_01/compass_z", (float)z);
     #endif
 
     delay(100);
