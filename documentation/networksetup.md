@@ -10,4 +10,6 @@ nmcli con up GTvisitor
 # back to hotspot
 nmcli con up MI-Blocks-AP
 
-
+# Audio setup
+- first run jackd -d alsa -d hw:2 -r 44100 -p 256
+- then pd Media -> Jack
