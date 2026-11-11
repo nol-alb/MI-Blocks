@@ -11,5 +11,5 @@ nmcli con up GTvisitor
 nmcli con up MI-Blocks-AP
 
 # Audio setup
-- first run jackd -d alsa -d hw:2 -r 44100 -p 256
+- first run jackd -d alsa -d hw:USB -r 48000 -p 512 -n 3
 - then pd Media -> Jack
